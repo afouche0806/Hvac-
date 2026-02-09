@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HVAC Pro Connect</title>
+    <script src="js/qrcode.min.js"></script>
+    <script src="js/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --neon: #00ff41; --bg: #050a05; --card: rgba(255,255,255,0.03); --glow: 0 0 15px rgba(0,255,65,0.4); }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; padding-bottom: 80px; }
+        .view { display: none; padding: 25px; animation: fadeIn 0.4s ease-out; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .card { 
+            background: var(--card); 
+            backdrop-filter: blur(15px); 
+            border: 1px solid rgba(0,255,65,0.15); 
+            border-radius: 18px; 
+            padding: 22px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .neon-text { color: var(--neon); text-shadow: var(--glow); font-weight: 800; letter-spacing: 1px; }
+        .logo-badge { width: 80px; height: 80px; margin: 0 auto 15px; display: block; filter: drop-shadow(var(--glow)); }
+        
+        input, textarea, select { 
+            width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; 
+            border: 1px solid rgba(0,255,65,0.2); background: #0a0a0a; color: #fff; 
+            box-sizing: border-box; font-size: 1rem;
+        }
+        .btn { 
+            background: #1a1a1a; color: #fff; border: 1px solid #333; padding: 18px; 
+            border-radius: 14px; width: 100%; font-weight: bold; cursor: pointer; 
+            margin-top: 12px; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-primary { 
+            background: var(--neon); color: #000; border: none; 
+            box-shadow: var(--glow); font-weight: 900;
+        }
+        .btn:active { transform: scale(0.96); opacity: 0.8; }
+        
+        /* Bottom Navigation */
+        .nav-bar { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: rgba(10,15,10,0.95); backdrop-filter: blur(10px);
+            display: flex; border-top: 1px solid rgba(0,255,65,0.2); 
+            height: 75px; z-index: 1000; 
+        }
+        .nav-item { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; font-size: 0.75rem; color: #666; 
+            text-decoration: none; cursor: pointer; font-weight: bold;
+        }
+        .nav-item.active { color: var(--neon); text-shadow: var(--glow); }
+        .nav-item span { margin-top: 4px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        /* Checklist Styling */
+        .checklist-item {
+            display: flex; align-items: center; padding: 14px; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s;
+        }
+        .checklist-item:last-child { border-bottom: none; }
+        .checklist-item input[type="checkbox"] {
+            appearance: none; width: 28px; height: 28px; border: 2px solid var(--neon);
+            border-radius: 8px; margin-right: 15px; position: relative; cursor: pointer; background: transparent;
+        }
+        .checklist-item input[type="checkbox"]:checked { background: var(--neon); box-shadow: var(--glow); }
+        .checklist-item input[type="checkbox"]:checked::after {
+            content: '✓'; position: absolute; color: #000; font-weight: 900; 
+            left: 6px; top: 1px; font-size: 18px;
+        }
+        
+        #invoice-paper { background: #fff; color: #000; padding: 25px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; }
+        @media print { .nav-bar, .btn, .logo-badge:not(#invoice-paper *) { display: none !important; } body { padding: 0; background: white; } #v-invoice { display: block !important; } #invoice-paper { border: none; box-shadow: none; } }
+    </style>
+</head>
+<body>
+
+    <div id="v-home" class="view active">
+        <img src="logo.jpeg" class="logo-badge">
+        <h2 style="text-align:center;" class="neon-text">HVAC PRO CONNECT</h2>
+        <div class="card" style="border: 1px solid var(--neon);">
+            <p style="text-align:center; opacity:0.9; font-weight:bold;">OUR MISSION<br><span style="font-size:0.85rem; opacity:0.8; font-weight:normal; display:block; margin-top:8px; line-height:1.4;">Precision. Integrity. Reliability. Delivering high-standard HVAC and Plumbing solutions with professional accuracy and modern technology.</span></p>
+        </div>
+        <div class="grid">
+            <button class="btn" onclick="show('v-tools')">🛠️ TOOLS</button>
+            <button class="btn" onclick="show('v-jobs')">💼 JOBS</button>
+            <button class="btn btn-primary" onclick="sendBusinessCard()" style="grid-column: span 2;">✉️ SEND BIZ CARD</button>
+        </div>
+    </div>
+
+    <div id="v-tools" class="view">
+        <h3>Calculators & Tools</h3>
+        <div class="card">
+            <button class="btn" onclick="show('v-tool-btu')">🌡️ BTU Load (Metric)</button>
+            <button class="btn" onclick="show('v-tool-pt')">🧪 P-T Chart (Celsius)</button>
+            <button class="btn" onclick="show('v-tool-pipe')">💧 Pipe Volume (Liters)</button>
+            <button class="btn" onclick="show('v-tool-ohms')">⚡ Ohm's Law</button>
+            <button class="btn" onclick="show('v-tool-wire-size')">📏 Wire Sizing</button>
+            <button class="btn" onclick="show('v-tool-vd')">⬇️ Voltage Drop</button>
+            <button class="btn" onclick="show('v-tool-conduit')">🚰 Conduit Fill</button>
+            <button class="btn" onclick="show('v-tool-motor-fla')">🔌 Motor FLA/RLA</button>
+            <button class="btn" onclick="show('v-tool-pfc')">⚡ Power Factor Correct.</button>
+            <button class="btn" onclick="show('v-tool-duct-size')">💨 Duct Sizing</button>
+            <button class="btn" onclick="show('v-tool-refrigerant')">❄️ Refrigerant Charge</button>
+            <button class="btn" onclick="show('v-tool-pipe-pressure-drop')">💧 Pipe Pressure Drop</button>
+            <button class="btn" onclick="show('v-error-codes')">⚠️ Error Codes</button>
+<button class="btn" onclick="show('v-tool-level'); initLevel();">📐 PRO LEVEL</button><button class="btn" onclick="show('v-tool-measure')">📏 TAPE MEASURE</button>
+        </div>
+    </div>
+
+    <div id="v-jobs" class="view">
+        <h3>Job Management</h3>
+        <div class="grid">
+            <button class="btn" onclick="show('v-note')">📝 NOTES</button>
+            <button class="btn" onclick="if(typeof Quote !== 'undefined') Quote.clear(); show('v-quote');">💰 NEW QUOTE</button>
+            <button class="btn" onclick="show('v-saved-quotes'); renderSavedQuotes();">📁 SAVED QUOTES</button>
+        </div>
+        <button class="btn" onclick="show('v-check')" style="margin-top:10px;">✅ SERVICE CHECKLIST</button>
+        <button class="btn" onclick="show('v-inventory')" style="margin-top:10px;">📦 MANAGE INVENTORY</button>
+    </div>
+
+    <div id="v-check" class="view">
+        <div class="card">
+            <h3 style="text-align:center;" class="neon-text">SERVICE CHECKLIST</h3>
+            <p style="text-align:center; opacity:0.7; font-size:0.8rem; margin-bottom:15px; text-transform:uppercase; letter-spacing:2px;">Aircon Maintenance</p>
+            
+            <div style="display:flex; gap:12px; margin-bottom:20px;">
+                <button class="btn btn-primary" style="flex:1; padding:12px; font-size:0.9rem;" onclick="toggleChecklist('minor')">MINOR</button>
+                <button class="btn btn-primary" style="flex:1; padding:12px; font-size:0.9rem;" onclick="toggleChecklist('major')">MAJOR</button>
+            </div>
+
+            <div id="minor-checklist" class="checklist-container">
+                <h4 style="border-bottom:1px solid rgba(0,255,65,0.3); padding-bottom:8px;" class="neon-text">MINOR SERVICE</h4>
+                <div class="checklist-item"><input type="checkbox"> Clean indoor filters</div>
+                <div class="checklist-item"><input type="checkbox"> Clean evaporator coil (indoor)</div>
+                <div class="checklist-item"><input type="checkbox"> Clean condenser coil (outdoor)</div>
+                <div class="checklist-item"><input type="checkbox"> Check refrigerant suction pressure</div>
+                <div class="checklist-item"><input type="checkbox"> Inspect drain pipe for blockages</div>
+                <div class="checklist-item"><input type="checkbox"> Check remote control batteries</div>
+                <div class="checklist-item"><input type="checkbox"> Test run & temp drop check</div>
+            </div>
+
+            <div id="major-checklist" class="checklist-container" style="display:none;">
+                <h4 style="border-bottom:1px solid rgba(0,255,65,0.3); padding-bottom:8px;" class="neon-text">MAJOR SERVICE</h4>
+                <div class="checklist-item"><input type="checkbox"> <b>All Minor Service items</b></div>
+                <div class="checklist-item"><input type="checkbox"> Chemical clean evaporator coil</div>
+                <div class="checklist-item"><input type="checkbox"> Chemical clean condenser coil</div>
+                <div class="checklist-item"><input type="checkbox"> Deep clean blower wheel & housing</div>
+                <div class="checklist-item"><input type="checkbox"> Flush and treat drain line</div>
+                <div class="checklist-item"><input type="checkbox"> Tighten all electrical terminals</div>
+                <div class="checklist-item"><input type="checkbox"> Test compressor run capacitor</div>
+                <div class="checklist-item"><input type="checkbox"> Check fan motor bearings/noise</div>
+                <div class="checklist-item"><input type="checkbox"> Check compressor mounting</div>
+            </div>
+
+            <button class="btn btn-primary" style="margin-top:25px;" onclick="generateChecklistPDF()">SAVE AS PDF</button>
+            <button class="btn" style="margin-top:10px; border-color:rgba(255,255,255,0.1);" onclick="show('v-jobs')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-saved-quotes" class="view">
+        <div class="card">
+            <h3>📁 Saved Quotes</h3>
+            <div id="saved-quotes-list" style="margin-top: 15px;">
+                <!-- Saved quotes will be dynamically loaded here -->
+            </div>
+            <button class="btn" onclick="show('v-jobs')" style="background:#222; margin-top:20px;">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-inventory" class="view">
+        <h3>Manage Inventory</h3>
+        <div class="card">
+            <h4>Add / Edit Item</h4>
+            <input type="hidden" id="inv-edit-index" value="">
+            <input type="text" id="inv-item-name" placeholder="Item Name">
+            <input type="number" id="inv-item-price" placeholder="Item Price (R)">
+            <button class="btn btn-primary" onclick="Inventory.save()">SAVE ITEM</button>
+        </div>
+        <div class="card">
+            <h4>Existing Items</h4>
+            <div id="inventory-list-container">
+                <!-- Item list will be rendered here by JS -->
+            </div>
+        </div>
+        <button class="btn" onclick="show('v-jobs')" style="background:#222;">BACK</button>
+    </div>
+
+    <div id="v-biz" class="view">
+        <div class="card" style="text-align:center;">
+            <img src="logo.jpeg" style="width:100px; height:100px; object-fit:contain; margin-bottom:10px;">
+            <h3 id="disp-biz-name" style="color:var(--neon); margin:5px 0;">Hvac Plumbing Pro Connect</h3>
+            <p id="disp-name" style="margin:5px 0; font-weight:bold;">Andre Fouche</p>
+            <div id="qrcode" style="background:#fff; padding:10px; display:inline-block; margin:10px; border-radius:10px;"></div>
+            <p id="disp-phone" style="margin:5px 0;">083 798 6843</p>
+            <p id="disp-email" style="margin:5px 0; opacity:0.8; font-size:0.9rem;">hvac.proconnect@gmail.com</p>
+            <p id="disp-alt" style="margin:5px 0; opacity:0.8; font-size:0.9rem;"></p>
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:15px 0;">
+            <div class="grid">
+                <button class="btn btn-primary" onclick="shareBusinessCard()">✉️ SEND CARD</button>
+                <button class="btn" onclick="show('v-biz-card-edit'); populateBizEditForm();">⚙️ EDIT INFO</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="v-quote" class="view">
+        <div class="card">
+            <img src="logo.jpeg" class="logo-badge">
+            <h3>New Quote (ZAR)</h3>
+            <input type="text" id="q-client" placeholder="Client Name">
+            <input type="text" id="q-job-no" placeholder="Job Number (Optional)">
+            <input type="date" id="q-date">
+            <textarea id="q-desc" rows="3" placeholder="General Work Description (e.g. Installation of new unit)"></textarea>
+            
+            <div id="quote-items-container" style="margin-top:15px;">
+                <!-- Line items will appear here -->
+            </div>
+
+            <label>Add Items:</label>
+            <div style="display:flex; gap:5px;">
+                <select id="mat-select" onchange="addMaterial()" style="flex:2;">
+                    <option value="">-- From Inventory --</option>
+                </select>
+                <button class="btn" onclick="showManualItemModal()" style="flex:1; margin-top:8px; padding:10px; font-size:0.8rem;">+ MANUAL</button>
+            </div>
+            
+            <div class="card" style="margin-top:15px; background:rgba(0,255,65,0.05); border:1px dashed var(--neon);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Subtotal:</span>
+                    <strong id="q-subtotal-display">R0.00</strong>
+                </div>
+                <input type="hidden" id="q-cost" value="0">
+            </div>
+
+            <!-- Manual Item Modal (Hidden by default) -->
+            <div id="manual-item-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;">
+                <div class="card" style="width:90%; max-width:400px; background:#1a1a1a;">
+                    <h4>Add Manual Item</h4>
+                    <input type="text" id="m-item-name" placeholder="Item Description">
+                    <input type="number" id="m-item-price" placeholder="Price (R)">
+                    <div class="grid">
+                        <button class="btn btn-primary" onclick="addManualItem()">ADD</button>
+                        <button class="btn" onclick="hideManualItemModal()">CANCEL</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="saveAndSendQuote()">SAVE & SEND PDF</button>
+            <button class="btn" onclick="saveQuote()">💾 SAVE QUOTE ONLY</button>
+            <button class="btn" onclick="generateQuotePDF()">PRINT / SAVE PDF</button>
+            <button class="btn" onclick="generateInvoice()">PREVIEW INVOICE</button>
+            <button class="btn" onclick="show('v-jobs')" style="background:#222;">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-invoice" class="view">
+        <div id="invoice-paper">
+            <div style="text-align:right; font-size:12px; font-weight:bold; opacity:0.6;">TAX INVOICE</div>
+            <img src="logo.jpeg" style="width:50px;">
+            <p><strong style="font-size:22px;">Hvac Plumbing Pro Connect</strong><br>Andre Fouche: 0837986843</p>
+            <hr>
+            <p>Job No: <span id="i-job-no"></span></p>
+            <p>Date: <span id="i-date"></span></p>
+            <p>Client: <span id="i-client"></span></p>
+            <p>Work:</p>
+            <div id="i-desc"></div>
+            <p><strong>TOTAL: R<span id="i-total"></span></strong></p>
+            <hr>
+            <p style="font-size:0.6rem;">BANK: Standard Bank | Acc: 10227678220<br>Branch: 7654 | Acc Holder: MR ANDRE FOUCHE</p>
+        </div>
+        <button class="btn btn-primary" onclick="generateInvoicePDF()">SAVE AS PDF</button>
+        <button class="btn" onclick="show('v-jobs')">BACK</button>
+    </div>
+
+    <div id="v-tool-btu" class="view">
+        <div class="card">
+            <h3>🌡️ BTU Load (Metric)</h3>
+            <label>Room Area (m²):</label>
+            <input type="number" id="t-area" placeholder="e.g. 20" oninput="doMath()">
+            <label>Sun Factor:</label>
+            <select id="t-sun" onchange="doMath()">
+                <option value="600">Normal / Shaded</option>
+                <option value="700">High Sun / Large Windows</option>
+            </select>
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center;">
+                <h2 id="r-btu" style="color:var(--neon); margin:0;">0 BTU</h2>
+                <small id="r-kw">0 kW</small>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-pt" class="view">
+        <div class="card">
+            <h3>🧪 P-T Chart</h3>
+            <select id="t-gas" onchange="doMath()">
+                <option value="R410A">R410A</option>
+                <option value="R32">R32</option>
+                <option value="R22">R22</option>
+                <option value="R134a">R134a</option>
+            </select>
+            <input type="number" id="t-psi" placeholder="Pressure (PSI)" oninput="doMath()">
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center;">
+                <h2 id="r-temp" style="color:var(--neon); margin:0;">-- °C</h2>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-pipe" class="view">
+        <div class="card">
+            <h3>💧 Pipe Volume</h3>
+<button class="btn" onclick="show('v-tool-level'); initLevel();">📐 PRO LEVEL</button><button class="btn" onclick="show('v-tool-measure')">📏 TAPE MEASURE</button>
+            <input type="number" id="t-dia" placeholder="Diameter (mm)" oninput="doMath()">
+            <input type="number" id="t-len" placeholder="Length (m)" oninput="doMath()">
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center;">
+                <h2 id="r-liters" style="color:var(--neon); margin:0;">0.00 L</h2>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-ohms" class="view">
+        <div class="card">
+            <h3>⚡ Ohm's Law</h3>
+            <p style="opacity:0.7;">Enter any two values to calculate the others.</p>
+            <label>Voltage (V):</label>
+            <input type="number" id="ohms-v" placeholder="Volts" oninput="calculateOhms()">
+            <label>Current (A):</label>
+            <input type="number" id="ohms-i" placeholder="Amps" oninput="calculateOhms()">
+            <label>Resistance (Ω):</label>
+            <input type="number" id="ohms-r" placeholder="Ohms" oninput="calculateOhms()">
+            <label>Power (W):</label>
+            <input type="number" id="ohms-p" placeholder="Watts" oninput="calculateOhms()">
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-wire-size" class="view">
+        <div class="card">
+            <h3>🧮 Wire Sizing</h3>
+            <p style="opacity:0.7;">(Simplified Guideline)</p>
+            <label>Amperage (A):</label>
+            <input type="number" id="wire-amps" placeholder="e.g. 15" oninput="calculateWireSize()">
+            <label>Voltage (V):</label>
+            <input type="number" id="wire-volts" placeholder="e.g. 120" oninput="calculateWireSize()">
+            <label>Distance (m):</label>
+            <input type="number" id="wire-dist" placeholder="e.g. 10" oninput="calculateWireSize()">
+            <label>Conductor Material:</label>
+            <select id="wire-material" onchange="calculateWireSize()">
+                <option value="copper">Copper</option>
+                <option value="aluminum">Aluminum</option>
+            </select>
+            <label>Max Voltage Drop (%):</label>
+            <input type="number" id="wire-vd-percent" value="3" oninput="calculateWireSize()">
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Recommended Size:</h4>
+                <h2 id="wire-result" style="color:var(--neon); margin:0;">-- mm²</h2>
+                <small style="opacity:0.7;">This is a simplified guideline and should not replace local electrical codes (SANS 10142).</small>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-vd" class="view">
+        <div class="card">
+            <h3>⚡ Voltage Drop</h3>
+            <label>Amperage (A):</label>
+            <input type="number" id="vd-amps" placeholder="e.g. 15" oninput="calculateVoltageDrop()">
+            <label>Voltage (V):</label>
+            <input type="number" id="vd-volts" placeholder="e.g. 120" oninput="calculateVoltageDrop()">
+            <label>Distance (m, one-way):</label>
+            <input type="number" id="vd-dist" placeholder="e.g. 10" oninput="calculateVoltageDrop()">
+            <label>Conductor Material:</label>
+            <select id="vd-material" onchange="calculateVoltageDrop()">
+                <option value="copper">Copper</option>
+                <option value="aluminum">Aluminum</option>
+            </select>
+            <label>Wire Size (mm²):</label>
+            <select id="vd-gauge" onchange="calculateVoltageDrop()">
+                <option value="1.0">1.0 mm²</option>
+                <option value="1.5">1.5 mm²</option>
+                <option value="2.5">2.5 mm²</option>
+                <option value="4.0">4.0 mm²</option>
+                <option value="6.0">6.0 mm²</option>
+                <option value="10.0">10.0 mm²</option>
+                <option value="16.0">16.0 mm²</option>
+                <option value="25.0">25.0 mm²</option>
+                <option value="35.0">35.0 mm²</option>
+                <option value="50.0">50.0 mm²</option>
+            </select>
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Voltage Drop:</h4>
+                <h2 id="vd-volts-result" style="color:var(--neon); margin:0;">0.00 V</h2>
+                <h4 style="margin-bottom:5px;">Percentage Drop:</h4>
+                <h2 id="vd-percent-result" style="color:var(--neon); margin:0;">0.00 %</h2>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-conduit" class="view">
+        <div class="card">
+            <h3>🚰 Conduit Fill</h3>
+            <p style="opacity:0.7;">(NEC/CEC based guideline)</p>
+            <label>Conduit Size:</label>
+            <select id="conduit-size" onchange="calculateConduitFill()">
+                <option value="160">1/2" (EMT, approx 160 mm² area)</option>
+                <option value="280">3/4" (EMT, approx 280 mm² area)</option>
+                <option value="480">1" (EMT, approx 480 mm² area)</option>
+                <option value="800">1 1/4" (EMT, approx 800 mm² area)</option>
+                <option value="1200">1 1/2" (EMT, approx 1200 mm² area)</option>
+                <option value="1900">2" (EMT, approx 1900 mm² area)</option>
+            </select>
+            <label>Wire Size (mm²):</label>
+            <select id="conduit-wire-gauge" onchange="calculateConduitFill()">
+                <option value="1.0">1.0 mm²</option>
+                <option value="1.5">1.5 mm²</option>
+                <option value="2.5">2.5 mm²</option>
+                <option value="4.0">4.0 mm²</option>
+                <option value="6.0">6.0 mm²</option>
+                <option value="10.0">10.0 mm²</option>
+                <option value="16.0">16.0 mm²</option>
+                <option value="25.0">25.0 mm²</option>
+                <option value="35.0">35.0 mm²</option>
+                <option value="50.0">50.0 mm²</option>
+            </select>
+            <label>Number of Wires:</label>
+            <input type="number" id="conduit-num-wires" placeholder="e.g. 3" oninput="calculateConduitFill()" value="1">
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Allowed Wires:</h4>
+                <h2 id="conduit-allowed" style="color:var(--neon); margin:0;">--</h2>
+                <h4 style="margin-bottom:5px;">Remaining Capacity:</h4>
+                <h2 id="conduit-remaining" style="color:var(--neon); margin:0;">-- mm²</h2>
+                <small style="opacity:0.7;">Based on 40% fill for &gt;2 wires, 60% for 1 wire, 40% for 2 wires.</small>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-motor-fla" class="view">
+        <div class="card">
+            <h3>🔌 Motor FLA/RLA</h3>
+            <p style="opacity:0.7;">Full/Running Load Amps</p>
+            <label>Input Type:</label>
+            <select id="motor-input-type" onchange="toggleMotorInput(); calculateMotorFLA();">
+                <option value="hp">Horsepower (HP)</option>
+                <option value="kw">Kilowatts (kW)</option>
+            </select>
+            <label id="motor-hp-label">Horsepower (HP):</label>
+            <input type="number" id="motor-hp" placeholder="e.g. 5" oninput="calculateMotorFLA()">
+            <label id="motor-kw-label" style="display:none;">Kilowatts (kW):</label>
+            <input type="number" id="motor-kw" placeholder="e.g. 3.7" style="display:none;" oninput="calculateMotorFLA()">
+
+            <label>Voltage (V):</label>
+            <input type="number" id="motor-volts" placeholder="e.g. 230" oninput="calculateMotorFLA()">
+            <label>Phase:</label>
+            <select id="motor-phase" onchange="calculateMotorFLA()">
+                <option value="single">Single Phase</option>
+                <option value="three">Three Phase</option>
+            </select>
+            <label>Power Factor (PF, optional, default 0.8):</label>
+            <input type="number" id="motor-pf" placeholder="e.g. 0.8" value="0.8" oninput="calculateMotorFLA()">
+            <label>Efficiency (Eff, optional, default 0.85):</label>
+            <input type="number" id="motor-eff" placeholder="e.g. 0.85" value="0.85" oninput="calculateMotorFLA()">
+
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Full Load Amps (FLA):</h4>
+                <h2 id="motor-fla-result" style="color:var(--neon); margin:0;">0.00 A</h2>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-pfc" class="view">
+        <div class="card">
+            <h3>⚡ Power Factor Correction</h3>
+            <label>Apparent Power (kVA):</label>
+            <input type="number" id="pfc-kva" placeholder="e.g. 100" oninput="calculatePFC()">
+            <label>Original Power Factor (PF1):</label>
+            <input type="number" id="pfc-pf1" placeholder="e.g. 0.75" oninput="calculatePFC()">
+            <label>Target Power Factor (PF2):</label>
+            <input type="number" id="pfc-pf2" placeholder="e.g. 0.95" oninput="calculatePFC()">
+            <label>Voltage (V):</label>
+            <input type="number" id="pfc-volts" placeholder="e.g. 400" oninput="calculatePFC()">
+            <label>Phase:</label>
+            <select id="pfc-phase" onchange="calculatePFC()">
+                <option value="single">Single Phase</option>
+                <option value="three">Three Phase</option>
+            </select>
+            <label>Frequency (Hz, default 50):</label>
+            <input type="number" id="pfc-freq" value="50" oninput="calculatePFC()">
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Required Reactive Power:</h4>
+                <h2 id="pfc-kvar-result" style="color:var(--neon); margin:0;">0.00 kVAR</h2>
+                <h4 style="margin-bottom:5px;">Required Capacitance (per phase):</h4>
+                <h2 id="pfc-cap-result" style="color:var(--neon); margin:0;">0.00 μF</h2>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-duct-size" class="view">
+        <div class="card">
+            <h3>💨 Duct Sizing (Metric)</h3>
+            <label>Airflow (m³/h):</label>
+            <input type="number" id="duct-airflow" placeholder="e.g. 1700" oninput="calculateDuctSize()">
+            <label>Air Velocity (m/s):</label>
+            <input type="number" id="duct-velocity" placeholder="e.g. 4" oninput="calculateDuctSize()">
+            <label>Duct Type:</label>
+            <select id="duct-type" onchange="toggleDuctAspectRatio(); calculateDuctSize();">
+                <option value="round">Round</option>
+                <option value="rectangular">Rectangular</option>
+            </select>
+            <div id="duct-aspect-ratio-div" style="display:none;">
+                <label>Aspect Ratio (W:H, e.g., 2 for 2:1):</label>
+                <input type="number" id="duct-aspect-ratio" value="1" min="1" oninput="calculateDuctSize()">
+            </div>
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Required Duct Area:</h4>
+                <h2 id="duct-area-result" style="color:var(--neon); margin:0;">0.00 cm²</h2>
+                <h4 style="margin-bottom:5px;">Recommended Dimensions:</h4>
+                <h2 id="duct-dim-result" style="color:var(--neon); margin:0;">--</h2>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-refrigerant" class="view">
+        <div class="card">
+            <h3>❄️ Refrigerant Charge (Metric)</h3>
+            <p style="opacity:0.7;">(Superheat & Subcooling)</p>
+            <label>Refrigerant Type:</label>
+            <select id="ref-type" onchange="calculateRefrigerantCharge()">
+                <option value="R410A">R-410A</option>
+                <option value="R32">R-32</option>
+                <option value="R22">R-22</option>
+                <option value="R134a">R-134a</option>
+            </select>
+            <label>Suction Pressure (PSI):</label>
+            <input type="number" id="ref-suction-psi" placeholder="e.g. 120" oninput="calculateRefrigerantCharge()">
+            <label>Suction Line Temp (°C):</label>
+            <input type="number" id="ref-suction-temp" placeholder="e.g. 10" oninput="calculateRefrigerantCharge()">
+            <label>Liquid Pressure (PSI):</label>
+            <input type="number" id="ref-liquid-psi" placeholder="e.g. 250" oninput="calculateRefrigerantCharge()">
+            <label>Liquid Line Temp (°C):</label>
+            <input type="number" id="ref-liquid-temp" placeholder="e.g. 35" oninput="calculateRefrigerantCharge()">
+
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Calculated Superheat:</h4>
+                <h2 id="ref-superheat-result" style="color:var(--neon); margin:0;">-- °C</h2>
+                <h4 style="margin-bottom:5px;">Calculated Subcooling:</h4>
+                <h2 id="ref-subcooling-result" style="color:var(--neon); margin:0;">-- °C</h2>
+                <small style="opacity:0.7;">Requires accurate P-T chart for saturation temperatures.</small>
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-pipe-pressure-drop" class="view">
+        <div class="card">
+            <h3>💧 Pipe Pressure Drop (Metric)</h3>
+            <p style="opacity:0.7;">(Hazen-Williams for Water)</p>
+            <label>Flow Rate (L/min):</label>
+            <input type="number" id="ppd-gpm" placeholder="e.g. 40" oninput="calculatePipePressureDrop()">
+            <label>Pipe Material:</label>
+            <select id="ppd-material" onchange="calculatePipePressureDrop()">
+                <option value="140">Copper (C=140)</option>
+                <option value="150">PVC (C=150)</option>
+                <option value="100">Steel (C=100)</option>
+            </select>
+            <label>Pipe Diameter (mm, internal):</label>
+            <input type="number" id="ppd-diameter" placeholder="e.g. 22" oninput="calculatePipePressureDrop()">
+            <label>Pipe Length (meters):</label>
+            <input type="number" id="ppd-length" placeholder="e.g. 30" oninput="calculatePipePressureDrop()">
+            <div class="card" style="background:rgba(0,255,65,0.1); text-align:center; margin-top:15px;">
+                <h4 style="margin-bottom:5px;">Resulting Pressure Drop:</h4>
+                <h2 id="ppd-result" style="color:var(--neon); margin:0;">0.00 Bar</h2>
+            </div>
+            
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-error-codes" class="view">
+        <div class="card">
+            <h3>⚠️ Error Codes</h3>
+            <p style="opacity:0.7;">Search common HVAC & Plumbing codes.</p>
+            <input type="text" id="error-code-search" placeholder="Search by Code, Make or Issue..." oninput="filterErrorCodes()">
+            <select id="error-category-filter" onchange="filterErrorCodes()">
+                <option value="All">All Categories</option>
+                <option value="Aircon">Aircon</option>
+                <option value="Plumbing">Plumbing</option>
+                <option value="Electrical">Electrical</option>
+            </select>
+            <div id="error-code-list" style="margin-top: 15px;">
+                <!-- Error codes will be dynamically loaded here -->
+            </div>
+            <button class="btn" onclick="show('v-tools')">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-biz-card-edit" class="view">
+        <div class="card">
+            <h3>🆔 Edit Business Card</h3>
+            <label>Business Name:</label>
+            <input type="text" id="biz-biz-name" placeholder="e.g. HVAC Pro Connect">
+            <label>Your Name:</label>
+            <input type="text" id="biz-name" placeholder="Your Name">
+            <label>Main Phone:</label>
+            <input type="tel" id="biz-phone" placeholder="e.g. 083 798 6843">
+            <label>Email:</label>
+            <input type="email" id="biz-email" placeholder="e.g. hvac.proconnect@gmail.com">
+            <label>Alternate Number:</label>
+            <input type="tel" id="biz-alt-num" placeholder="Alternate Number">
+            <div class="grid">
+                <button class="btn btn-primary" onclick="saveBusinessCardDetails()">SAVE & PREVIEW</button>
+                <button class="btn" onclick="show('v-biz')">CANCEL</button>
+            </div>
+        </div>
+    </div>
+    <div id="v-note" class="view">
+        <div class="card">
+            <h3>📝 Job Note Pad</h3>
+            <textarea id="j-note" rows="15" placeholder="Type job details here..."></textarea>
+            <button class="btn btn-primary" onclick="alert('Note Saved to Browser')">SAVE NOTE</button>
+            <button class="btn" onclick="show('v-jobs')">BACK</button>
+        </div>
+    </div>
+    <div id="v-tool-level" class="view">
+        <div class="card" style="text-align:center; padding: 20px 10px;">
+            <h3 style="color:var(--neon);">📐 PRO LEVEL</h3>
+            
+            <!-- Main Surface Level (Circular) -->
+            <div style="width:200px; height:200px; border:4px solid #333; border-radius:50%; margin:20px auto; position:relative; background:#000; box-shadow: inset 0 0 20px rgba(0,255,65,0.05);">
+                <!-- Crosshairs -->
+                <div style="position:absolute; top:50%; left:0; width:100%; height:1px; background:rgba(0,255,65,0.3);"></div>
+                <div style="position:absolute; left:50%; top:0; width:1px; height:100%; background:rgba(0,255,65,0.3);"></div>
+                <!-- Center Target -->
+                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:40px; height:40px; border:1px solid rgba(0,255,65,0.4); border-radius:50%;"></div>
+                
+                <div id="bubble" style="width:32px; height:32px; background:var(--neon); border-radius:50%; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); transition: 0.05s; box-shadow: 0 0 15px var(--neon);"></div>
+            </div>
+
+            <!-- Integrated Spirit Tubes -->
+            <div style="display:flex; justify-content:center; align-items:center; gap:30px; margin-top:30px; padding-bottom:20px;">
+                <!-- Vertical Spirit Level (Plumb) -->
+                <div style="text-align:center;">
+                    <div style="width:30px; height:100px; border:2px solid #333; border-radius:15px; position:relative; background:#000; margin:0 auto;">
+                        <div style="position:absolute; top:50%; left:0; width:100%; height:1px; background:rgba(0,255,65,0.3);"></div>
+                        <div id="bubble-v" style="width:20px; height:20px; background:var(--neon); border-radius:50%; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); transition: 0.05s;"></div>
+                    </div>
+                    <small style="display:block; margin-top:10px; color:#888; font-weight:bold; font-size:0.6rem;">PLUMB (V)</small>
+                </div>
+
+                <!-- Horizontal Spirit Level -->
+                <div style="text-align:center;">
+                    <div style="width:100px; height:30px; border:2px solid #333; border-radius:15px; position:relative; background:#000; margin:0 auto;">
+                        <div style="position:absolute; left:50%; top:0; width:1px; height:100%; background:rgba(0,255,65,0.3);"></div>
+                        <div id="bubble-h" style="width:20px; height:20px; background:var(--neon); border-radius:50%; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); transition: 0.05s;"></div>
+                    </div>
+                    <small style="display:block; margin-top:10px; color:#888; font-weight:bold; font-size:0.6rem;">LEVEL (H)</small>
+                </div>
+            </div>
+
+            <div id="level-txt" style="font-size:2rem; color:var(--neon); margin-top:10px; font-weight:bold;">0°</div>
+            <button class="btn" onclick="show('v-tools')" style="background:#222; margin-top:20px;">BACK</button>
+        </div>
+    </div>
+
+    <div id="v-tool-measure" class="view">
+        <div class="card" style="padding:0; overflow:hidden; position:relative; height:350px; background:#000; border-radius:15px;">
+            <video id="m-video" autoplay playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
+            
+            <!-- Crosshair Overlay (Fixed) -->
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:40px; height:40px; border:2px solid var(--neon); border-radius:50%; pointer-events:none; box-shadow: 0 0 10px var(--neon);">
+                <!-- Horizontal Line -->
+                <div style="position:absolute; top:50%; left:-20%; width:140%; height:2px; background:var(--neon); transform:translateY(-50%); box-shadow: 0 0 5px var(--neon);"></div>
+                <!-- Vertical Line -->
+                <div style="position:absolute; left:50%; top:-20%; height:140%; width:2px; background:var(--neon); transform:translateX(-50%); box-shadow: 0 0 5px var(--neon);"></div>
+                <!-- Center Dot -->
+                <div style="position:absolute; top:50%; left:50%; width:6px; height:6px; background:#ff3131; border-radius:50%; transform:translate(-50%,-50%); box-shadow: 0 0 5px red;"></div>
+            </div>
+
+            <!-- Live Distance Display -->
+            <div style="position:absolute; top:15px; width:100%; text-align:center; pointer-events:none;">
+                 <span style="background:rgba(0,0,0,0.6); padding:5px 10px; border-radius:10px; font-size:0.9rem; color:#fff;">Live Dist: <span id="m-live-val" style="color:var(--neon); font-weight:bold;">0.00</span>m</span>
+            </div>
+
+            <!-- 2-Point Result Display -->
+            <div style="position:absolute; bottom:15px; width:100%; text-align:center; pointer-events:none;">
+                <h2 style="color:var(--neon); margin:0; text-shadow: 2px 2px 4px #000; font-size:2.5rem;"><span id="m-val">0.00</span>m</h2>
+                <small style="color:#fff; text-shadow:1px 1px 2px #000;">Measured Width</small>
+            </div>
+        </div>
+
+        <div class="card">
+            <p style="opacity:0.7; font-size:0.8rem; text-align:center;">1. Aim at Start Point (Floor) -> Set Start<br>2. Aim at End Point (Floor) -> Set End</p>
+            
+            <div class="grid" style="margin-bottom:10px;">
+                <button class="btn" id="btn-pt-a" onclick="Measure.setPointA()" disabled style="padding:12px; font-size:0.8rem;">📍 SET START</button>
+                <button class="btn" id="btn-pt-b" onclick="Measure.setPointB()" disabled style="padding:12px; font-size:0.8rem;">🏁 SET END</button>
+            </div>
+
+            <label for="m-height">Your Eye Height (m):</label>
+            <input type="number" id="m-height" value="1.6" step="0.01" oninput="saveHeight()">
+            
+            <div class="grid">
+                <button class="btn btn-primary" onclick="startStopMeasure()" id="measure-toggle-btn">🚀 START CAMERA</button>
+                <button class="btn" onclick="resetMeasure()">RESET</button>
+                <button class="btn" onclick="calibrateMeasure()" style="background:#555; grid-column: span 2;">🎯 CALIBRATE</button>
+            </div>
+            <button class="btn" onclick="show('v-tools')" style="background:#222; margin-top:10px;">BACK</button>
+        </div>
+    </div>
+    <div class="nav-bar">
+        <div class="nav-item" onclick="show('v-home')">🏠<span>Home</span></div>
+        <div class="nav-item" onclick="show('v-tools')">🛠️<span>Tools</span></div>
+        <div class="nav-item" onclick="show('v-jobs')">💼<span>Jobs</span></div>
+        <div class="nav-item" onclick="show('v-biz'); makeQR();">🆔<span>Biz</span></div>
+    </div>
+
+    <script src="js/inventory-logic.js"></script>
+    <script src="js/quote-logic.js"></script>
+    <script src="js/measure-logic.js"></script>
+    <script src="js/tools-logic.js"></script>
+    <script src="js/qr_logic.js"></script>
+    <script>
+        // Preload Logo as Base64 to avoid "Tainted Canvas" error in html2pdf
+        let cachedLogoBase64 = null;
+        function preloadLogo() {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                cachedLogoBase64 = canvas.toDataURL('image/jpeg');
+            };
+            img.src = 'logo.jpeg';
+        }
+        window.addEventListener('load', preloadLogo);
+
+        // Core navigation
+        function show(id) {
+            // Stop measurement if navigating away from the measure tool
+            if (window.isMeasuring && id !== 'v-tool-measure') {
+                window.startStopMeasure();
+            }
+
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const target = document.getElementById(id);
+            if (target) {
+                target.classList.add('active');
+            }
+            window.scrollTo(0,0);
+            
+            // If showing the measure tool, load the saved height
+            if (id === 'v-tool-measure') {
+                window.loadHeight();
+            }
+
+            // If showing the quote view, set the current date
+            if (id === 'v-quote') {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                document.getElementById('q-date').value = `${yyyy}-${mm}-${dd}`;
+            }
+
+            // If showing the error codes view, render the codes
+            if (id === 'v-error-codes') {
+                window.renderErrorCodes();
+            }
+        }
+
+        // --- CHECKLIST LOGIC ---
+        function toggleChecklist(type) {
+            const minor = document.getElementById('minor-checklist');
+            const major = document.getElementById('major-checklist');
+            if (type === 'minor') {
+                minor.style.display = 'block';
+                major.style.display = 'none';
+            } else {
+                minor.style.display = 'none';
+                major.style.display = 'block';
+            }
+        }
+
+        // --- BUSINESS CARD LOGIC ---
+        function loadBusinessCard() {
+            const biz = JSON.parse(localStorage.getItem('hvac_biz_card')) || {
+                bizName: "Hvac Plumbing Pro Connect",
+                name: "Andre Fouche",
+                phone: "083 798 6843",
+                email: "hvac.proconnect@gmail.com",
+                alt: ""
+            };
+
+            // Update Display
+            document.getElementById('disp-biz-name').innerText = biz.bizName;
+            document.getElementById('disp-name').innerText = biz.name;
+            document.getElementById('disp-phone').innerText = biz.phone;
+            document.getElementById('disp-email').innerText = biz.email;
+            document.getElementById('disp-alt').innerText = biz.alt ? "Alt: " + biz.alt : "";
+
+            return biz;
+        }
+
+        function populateBizEditForm() {
+            const biz = loadBusinessCard();
+            document.getElementById('biz-biz-name').value = biz.bizName;
+            document.getElementById('biz-name').value = biz.name;
+            document.getElementById('biz-phone').value = biz.phone;
+            document.getElementById('biz-email').value = biz.email;
+            document.getElementById('biz-alt-num').value = biz.alt;
+        }
+
+        function saveBusinessCardDetails() {
+            const biz = {
+                bizName: document.getElementById('biz-biz-name').value,
+                name: document.getElementById('biz-name').value,
+                phone: document.getElementById('biz-phone').value,
+                email: document.getElementById('biz-email').value,
+                alt: document.getElementById('biz-alt-num').value
+            };
+
+            localStorage.setItem('hvac_biz_card', JSON.stringify(biz));
+            
+            // Re-render QR code since info changed
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = ''; // Clear old QR
+            
+            const vCard = `BEGIN:VCARD\nVERSION:3.0\nFN:${biz.name}\nORG:${biz.bizName}\nTEL:${biz.phone}\n${biz.alt ? 'TEL;TYPE=CELL:' + biz.alt + '\n' : ''}EMAIL:${biz.email}\nEND:VCARD`;
+            
+            new QRCode(qrContainer, {
+                text: vCard,
+                width: 160,
+                height: 160
+            });
+
+            loadBusinessCard(); // Update display
+            show('v-biz');
+            alert("Business card updated!");
+        }
+
+        function makeQR() {
+            const biz = loadBusinessCard();
+            const qrContainer = document.getElementById('qrcode');
+            
+            if (qrContainer.innerHTML === '') {
+                const vCard = `BEGIN:VCARD\nVERSION:3.0\nFN:${biz.name}\nORG:${biz.bizName}\nTEL:${biz.phone}\n${biz.alt ? 'TEL;TYPE=CELL:' + biz.alt + '\n' : ''}EMAIL:${biz.email}\nEND:VCARD`;
+                new QRCode(qrContainer, {
+                    text: vCard,
+                    width: 160,
+                    height: 160
+                });
+            }
+        }
+
+        async function shareBusinessCard() {
+            const biz = loadBusinessCard();
+            
+            // Create VCF Content
+            const vCard = `BEGIN:VCARD
+VERSION:3.0
+FN:${biz.name}
+ORG:${biz.bizName}
+TEL;TYPE=WORK,VOICE:${biz.phone}
+${biz.alt ? 'TEL;TYPE=CELL,VOICE:' + biz.alt : ''}
+EMAIL:${biz.email}
+END:VCARD`;
+
+            if (typeof Android !== 'undefined' && Android.shareFile) {
+                try {
+                    // Simple btoa for ASCII/Latin1.
+                    const base64 = btoa(unescape(encodeURIComponent(vCard)));
+                    const dataUrl = 'data:text/vcard;base64,' + base64;
+                    Android.shareFile(dataUrl, 'contact.vcf', 'text/vcard');
+                } catch(e) {
+                    alert("Error creating contact card: " + e.message);
+                }
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: biz.bizName,
+                        text: `*${biz.bizName}*\n${biz.name}\n📞 ${biz.phone}\n✉️ ${biz.email}`
+                    });
+                } catch (err) {
+                    console.error("Sharing failed", err);
+                }
+            } else {
+                const text = `*${biz.bizName}*\n${biz.name}\n📞 ${biz.phone}\n✉️ ${biz.email}${biz.alt ? '\n📱 Alt: ' + biz.alt : ''}`;
+                const waUrl = `whatsapp://send?text=${encodeURIComponent(text)}`;
+                window.open(waUrl, '_blank');
+            }
+        }
+
+        // QR Code generation
+        function sendBusinessCard() {
+            show('v-biz'); // Show the business card view
+            makeQR();      // Generate the QR code
+        }
+        
+        // --- QUOTE SAVE & PERSISTENCE ---
+        function saveQuote(silent = false) {
+            const clientName = document.getElementById('q-client').value;
+            const jobNo = document.getElementById('q-job-no').value;
+            const quoteDate = document.getElementById('q-date').value;
+            const workDesc = document.getElementById('q-desc').value;
+            const subtotal = Quote.getSubtotal();
+
+            if (!clientName || !quoteDate) {
+                if (!silent) alert("Please enter Client Name and Date.");
+                return null;
+            }
+
+            // Check if we are updating an existing quote or creating a new one
+            let quoteId = Quote.currentId;
+            if (!quoteId) {
+                quoteId = 'quote_' + Date.now();
+                Quote.currentId = quoteId;
+            }
+
+            const quote = {
+                id: quoteId,
+                client: clientName,
+                jobNo: jobNo,
+                date: quoteDate, 
+                description: workDesc,
+                items: JSON.parse(JSON.stringify(Quote.items)),
+                cost: subtotal
+            };
+
+            try {
+                const savedQuotes = JSON.parse(localStorage.getItem('hvac_saved_quotes')) || [];
+                
+                // Remove existing version of this quote if it exists
+                const index = savedQuotes.findIndex(q => q.id === quoteId);
+                if (index !== -1) {
+                    savedQuotes[index] = quote; // Update
+                } else {
+                    savedQuotes.push(quote); // Insert
+                }
+
+                localStorage.setItem('hvac_saved_quotes', JSON.stringify(savedQuotes));
+                if (!silent) alert('Quote saved successfully!');
+                return quote;
+            } catch (e) {
+                console.error("Error saving quote", e);
+                if (!silent) alert('Error saving quote.');
+                return null;
+            }
+        }
+
+        function renderSavedQuotes() {
+            const container = document.getElementById('saved-quotes-list');
+            if (!container) return;
+            const savedQuotes = JSON.parse(localStorage.getItem('hvac_saved_quotes')) || [];
+            container.innerHTML = '';
+            if (savedQuotes.length === 0) {
+                container.innerHTML = '<p style="opacity:0.5; text-align:center;">No saved quotes found.</p>';
+                return;
+            }
+            // Sort by date descending (newest first)
+            savedQuotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            savedQuotes.forEach(quote => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.background = '#1a1a1a';
+                card.style.marginBottom = '10px';
+                card.style.border = '1px solid #333';
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <strong>${quote.client}</strong><br>
+                            <small>${new Date(quote.date).toLocaleDateString()} | ${quote.jobNo || 'No Job#'}</small>
+                        </div>
+                        <div style="text-align:right; color:var(--neon);">
+                            R${parseFloat(quote.cost).toFixed(2)}
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;">
+                        <button class="btn" style="padding:5px 10px; font-size:0.7rem; flex:1;" onclick="openQuote('${quote.id}')">OPEN</button>
+                        <button class="btn" style="padding:5px 10px; font-size:0.7rem; flex:1;" onclick="deleteQuote('${quote.id}')">DEL</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openQuote(id) {
+            const savedQuotes = JSON.parse(localStorage.getItem('hvac_saved_quotes')) || [];
+            const quote = savedQuotes.find(q => q.id === id);
+            if (!quote) return;
+
+            Quote.currentId = quote.id; // Track the ID
+            
+            document.getElementById('q-client').value = quote.client;
+            document.getElementById('q-job-no').value = quote.jobNo || '';
+            document.getElementById('q-date').value = quote.date;
+            document.getElementById('q-desc').value = quote.description || '';
+            
+            Quote.items = quote.items || [];
+            Quote.render();
+
+            show('v-quote');
+        }
+
+        function deleteQuote(id) {
+            if (!confirm("Delete this quote?")) return;
+            const savedQuotes = JSON.parse(localStorage.getItem('hvac_saved_quotes')) || [];
+            const filtered = savedQuotes.filter(q => q.id !== id);
+            localStorage.setItem('hvac_saved_quotes', JSON.stringify(filtered));
+            renderSavedQuotes();
+        }
+
+        async function generateChecklistPDF() {
+            const element = document.createElement('div');
+            element.style.width = "680px"; 
+            element.style.padding = "40px";
+            element.style.color = "#000";
+            element.style.background = "#fff";
+            element.style.fontFamily = "Arial, sans-serif";
+            element.style.boxSizing = "border-box";
+
+            // Determine active checklist
+            const minor = document.getElementById('minor-checklist');
+            const isMinor = minor.style.display !== 'none';
+            const title = isMinor ? "MINOR SERVICE CHECKLIST" : "MAJOR SERVICE CHECKLIST";
+            
+            // Collect items
+            let allItems = [];
+            if (isMinor) {
+                allItems = Array.from(document.querySelectorAll('#minor-checklist .checklist-item'));
+            } else {
+                allItems = [
+                    ...Array.from(document.querySelectorAll('#minor-checklist .checklist-item')),
+                    ...Array.from(document.querySelectorAll('#major-checklist .checklist-item'))
+                ];
+            }
+
+            let itemsRows = '';
+            allItems.forEach(item => {
+                const clone = item.cloneNode(true);
+                const checkbox = clone.querySelector('input[type="checkbox"]');
+                const isChecked = item.querySelector('input[type="checkbox"]').checked; // Use original item for checked status
+
+                let text = '';
+                if (checkbox) {
+                    checkbox.remove(); // Remove the checkbox element from the clone
+                    text = clone.textContent.trim(); // Get the text content that remains
+                } else {
+                    text = clone.textContent.trim(); // If no checkbox, just get the text
+                }
+
+                if (text.includes('All Minor Service items')) { // Use this cleaned text for filtering
+                    return; // Skip the placeholder item
+                }
+                
+                const checkMark = isChecked ? '☑' : '☐';
+                const color = isChecked ? '#000' : '#777';
+                const weight = isChecked ? 'bold' : 'normal';
+                
+                itemsRows += `
+                    <tr>
+                        <td style="width: 40px; font-size: 24px; padding: 8px 0; border-bottom: 1px solid #eee; color:${color}; text-align:center;">${checkMark}</td>
+                        <td style="font-size: 16px; padding: 8px 0 8px 10px; border-bottom: 1px solid #eee; color:${color}; font-weight:${weight};">${text}</td>
+                    </tr>
+                `;
+            });
+
+            let clientRef = prompt("Enter Client Name / Unit Reference (Optional):");
+            if (clientRef === null) return; 
+            clientRef = clientRef || "General";
+            
+            const logoSrc = cachedLogoBase64;
+
+             element.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                    <div>
+                        <h1 style="margin:0; color:#00ff41; text-transform:uppercase; font-size:22px;">${title}</h1>
+                        <p style="margin:5px 0; font-weight:bold;">Hvac Plumbing Pro Connect</p>
+                        <p style="margin:2px 0; font-size:12px;">Andre Fouche: 083 798 6843</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <img src="${logoSrc}" style="width:80px; height:80px; object-fit:contain;">
+                    </div>
+                </div>
+
+                <div style="background:#f9f9f9; padding:15px; border-radius:5px; margin-bottom:20px;">
+                    <p style="margin:5px 0;"><strong>Ref:</strong> ${clientRef}</p>
+                    <p style="margin:5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse;">
+                    ${itemsRows}
+                </table>
+
+                <p style="text-align:center; margin-top:40px; color:#aaa; font-size:11px;">Generated by Hvac Pro Connect</p>
+            `;
+
+            const filename = `Checklist_${clientRef.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+            
+            // Append to body (off-screen) to ensure layout is calculated
+            element.style.position = 'fixed';
+            element.style.left = '-10000px';
+            element.style.top = '0';
+            document.body.appendChild(element);
+
+            try {
+                 await downloadPDF(element, filename);
+            } catch(e) {
+                alert("Error generating PDF: " + e.message);
+            } finally {
+                document.body.removeChild(element);
+            }
+        }
+
+        function generateInvoice() {
+            const client = document.getElementById('q-client').value || "Client";
+            const jobNo = document.getElementById('q-job-no').value || "N/A";
+            const date = document.getElementById('q-date').value || new Date().toISOString().slice(0, 10);
+            const desc = document.getElementById('q-desc').value.replace(/\n/g, '<br>') || "General maintenance";
+            
+            const subtotal = Quote.getSubtotal();
+            const total = subtotal;
+
+            document.getElementById('i-client').innerText = client;
+            document.getElementById('i-job-no').innerText = jobNo;
+            document.getElementById('i-date').innerText = new Date(date).toLocaleDateString();
+            
+            let itemsHtml = `<div>${desc}</div><hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">`;
+            if (Quote.items && Quote.items.length > 0) {
+                itemsHtml += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
+                Quote.items.forEach(item => {
+                    itemsHtml += `<tr><td style="padding:4px 0;">${item.name}</td><td style="text-align:right;">R${item.price.toFixed(2)}</td></tr>`;
+                });
+                itemsHtml += '</table><hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">';
+            }
+            
+            document.getElementById('i-desc').innerHTML = itemsHtml; 
+            document.getElementById('i-total').innerText = total.toFixed(2);
+            show('v-invoice');
+        }
+
+        async function getDocumentHTML(type = 'QUOTATION') {
+            const clientName = document.getElementById('q-client').value || "Client";
+            const jobNo = document.getElementById('q-job-no').value || "N/A";
+            const quoteDate = document.getElementById('q-date').value || new Date().toISOString().slice(0, 10);
+            const workDesc = document.getElementById('q-desc').value || "No description provided";
+            const subtotal = Quote.getSubtotal();
+            
+            const isInvoice = type === 'TAX INVOICE';
+            const themeColor = isInvoice ? '#00ff41' : '#0078d4';
+            // Use cached base64 logo or fallback (no logo) if not available
+            const logoSrc = cachedLogoBase64;
+            
+            const element = document.createElement('div');
+            element.style.width = "680px"; // Adjusted to fit A4 margins (approx 700px max)
+            element.style.padding = "40px";
+            element.style.color = "#000";
+            element.style.background = "#fff";
+            element.style.fontFamily = "Arial, sans-serif";
+            element.style.boxSizing = "border-box";
+            
+            let itemsRows = "";
+            if (Quote.items) {
+                Quote.items.forEach(item => {
+                    itemsRows += `
+                        <tr>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">${item.name}</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee; text-align:right;">R${item.price.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            element.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px;">
+                    <div>
+                        <p style="margin:0; color:${themeColor}; font-size:16px; font-weight:bold; letter-spacing:1px;">${type}</p>
+                        <h1 style="margin:5px 0 0 0; font-weight:bold; font-size:28px;">Hvac Plumbing Pro Connect</h1>
+                        <p style="margin:2px 0; font-size:12px;">Andre Fouche: 083 798 6843</p>
+                        <p style="margin:2px 0; font-size:12px;">hvac.proconnect@gmail.com</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <img src="${logoSrc}" style="width:100px; height:100px; object-fit:contain;">
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-bottom:30px; background:#f9f9f9; padding:15px; border-radius:5px;">
+                    <div>
+                        <p style="margin:0; color:#777; font-size:12px;">${isInvoice ? 'BILL TO:' : 'QUOTED TO:'}</p>
+                        <p style="margin:5px 0; font-weight:bold; font-size:16px;">${clientName}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <p style="margin:0; color:#777; font-size:12px;">DETAILS:</p>
+                        <p style="margin:5px 0;"><strong>Date:</strong> ${new Date(quoteDate).toLocaleDateString()}</p>
+                        <p style="margin:5px 0;"><strong>Job No:</strong> ${jobNo}</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <p style="font-weight:bold; border-bottom:2px solid ${themeColor}; padding-bottom:5px;">${isInvoice ? 'WORK PERFORMED' : 'WORK DESCRIPTION'}</p>
+                    <p style="white-space:pre-wrap; font-size:14px; color:#333;">${workDesc}</p>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+                    <thead>
+                        <tr style="background:#f2f2f2;">
+                            <th style="padding:10px; text-align:left;">Description</th>
+                            <th style="padding:10px; text-align:right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRows || '<tr><td colspan="2" style="padding:10px; text-align:center; color:#999;">No items listed</td></tr>'}
+                    </tbody>
+                </table>
+
+                <div style="display:flex; justify-content:flex-end;">
+                    <div style="width:250px;">
+                        <div style="display:flex; justify-content:space-between; padding:10px 0; border-top:2px solid ${themeColor}; margin-top:5px; font-weight:bold; font-size:18px; color:${themeColor};">
+                            <span>TOTAL:</span>
+                            <span>R${subtotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:50px; background:#f9f9f9; padding:20px; border-radius:5px; font-size:12px;">
+                    <p style="margin-top:0; font-weight:bold; color:${themeColor};">BANKING DETAILS:</p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr;">
+                        <p style="margin:2px 0;"><strong>Bank:</strong> Standard Bank</p>
+                        <p style="margin:2px 0;"><strong>Acc:</strong> 10227678220</p>
+                        <p style="margin:2px 0;"><strong>Branch:</strong> 7654</p>
+                        <p style="margin:2px 0;"><strong>Holder:</strong> MR ANDRE FOUCHE</p>
+                    </div>
+                </div>
+                
+                <p style="text-align:center; margin-top:40px; color:#aaa; font-size:11px;">${isInvoice ? 'Payment is due upon receipt. Thank You!' : 'This quotation is valid for 30 days. Thank You!'}</p>
+            `;
+            return element;
+        }
+
+        async function generateQuotePDF() {
+            try {
+                const q = saveQuote(true);
+                if (!q) return; 
+                
+                const element = await getDocumentHTML('QUOTATION');
+                const clientName = document.getElementById('q-client').value || "Client";
+                const filename = `Quote_${clientName.replace(/\s+/g, '_')}.pdf`;
+                downloadPDF(element, filename);
+            } catch (e) {
+                alert("Error generating PDF: " + e.message);
+                console.error(e);
+            }
+        }
+
+        async function generateInvoicePDF() {
+            try {
+                const q = saveQuote(true);
+                if (!q) return;
+
+                const element = await getDocumentHTML('TAX INVOICE');
+                const clientName = document.getElementById('q-client').value || "Client";
+                const filename = `Invoice_${clientName.replace(/\s+/g, '_')}.pdf`;
+                downloadPDF(element, filename);
+            } catch (e) {
+                alert("Error generating PDF: " + e.message);
+                console.error(e);
+            }
+        }
+
+        function downloadPDF(element, filename) {
+            const opt = {
+                margin: 0.3,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            if (typeof Android !== 'undefined' && Android.saveFile) {
+                html2pdf().from(element).set(opt).outputPdf('datauristring').then(function(pdfBase64) {
+                    Android.saveFile(pdfBase64, filename);
+                }).catch(err => alert("Android Save Error: " + err.message));
+            } else {
+                html2pdf().from(element).set(opt).save().catch(err => alert("Save Error: " + err.message));
+            }
+        }
+
+        async function saveAndSendQuote() {
+            try {
+                const clientName = document.getElementById('q-client').value;
+                const subtotal = Quote.getSubtotal();
+
+                if (!clientName || subtotal === 0) {
+                    alert("Please enter a client name and add at least one item.");
+                    return;
+                }
+
+                const savedQuote = saveQuote(true);
+                if (!savedQuote) return;
+
+                const element = await getDocumentHTML('QUOTATION');
+                const filename = `Quote_${clientName.replace(/\s+/g, '_')}.pdf`;
+                
+                const opt = {
+                    margin: 0.5,
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+
+                alert("Generating PDF...");
+
+                if (typeof Android !== 'undefined' && Android.shareFile) {
+                    html2pdf().from(element).set(opt).outputPdf('datauristring').then(function(pdfBase64) {
+                        Android.shareFile(pdfBase64, filename, 'application/pdf');
+                    }).catch(err => alert("Error generating PDF Data: " + err.message));
+                } else {
+                    // Fallback for browser testing
+                    const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
+                    const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+                    
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                         await navigator.share({
+                            files: [file],
+                            title: 'Quotation: ' + clientName,
+                            text: 'Please find the attached quotation.'
+                        });
+                    } else {
+                        const text = `*QUOTATION: ${clientName}*\nTotal: R${subtotal.toFixed(2)}\nAttached PDF available in downloads.`;
+                        if (navigator.share) {
+                            await navigator.share({ title: 'Quote', text: text });
+                        } else {
+                            window.open(`whatsapp://send?text=${encodeURIComponent(text)}`, '_blank');
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Sharing failed", err);
+                alert("PDF/Share Error: " + err.message);
+            }
+        }
+
+        function addMaterial() {
+            const select = document.getElementById('mat-select');
+            const itemName = select.value;
+            if (!itemName) return;
+            const item = Inventory.list.find(i => i.name === itemName);
+            if (item && typeof Quote !== 'undefined' && Quote.add) {
+                Quote.add(item);
+            }
+            select.selectedIndex = 0;
+        }
+    </script>
+</body>
+</html>
